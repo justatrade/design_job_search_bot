@@ -37,6 +37,13 @@ async def message_handler(event: events.NewMessage.Event):
 
     db = await get_db_session()
     filters = await filter_cache.get(db)
+    minus_filters = await filter_cache.get_minus_kw(db)
+
+    if not filter_cache.message_matches(
+            message.message, filters, minus_filters
+    ):
+        log.debug(f"🔍 Сработала минус группа")
+        return
 
     matched = filter_cache.extract_matched_keywords(message.message, filters)
     if len(matched) < len(filters):

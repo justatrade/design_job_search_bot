@@ -27,3 +27,9 @@ class FilterKeyword(Base):
     value = Column(String, nullable=False)
 
     group = relationship("FilterGroup", back_populates="keywords")
+
+class MinusKeyword(Base):
+    __tablename__ = "minus_keywords"
+
+    id = Column(Integer, primary_key=True)
+    value = Column(String, nullable=False)

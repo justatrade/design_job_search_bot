@@ -1,16 +1,17 @@
 import asyncio
-import re
 from collections import defaultdict
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from src.db.models import FilterGroup
+from src.db.models import FilterGroup, MinusKeyword
+
 
 class FilterCache:
     def __init__(self):
         self._cache: dict[str, list[str]] | None = None
+        self._minus_cache: list | None = None
         self._lock = asyncio.Lock()
 
     async def get(self, db: AsyncSession) -> dict[str, list[str]]:
@@ -36,13 +37,35 @@ class FilterCache:
             self._cache = result
             return self._cache
 
+    async def get_minus_kw(self, db: AsyncSession) -> list:
+        async with self._lock:
+            if self._minus_cache is not None:
+                return self._minus_cache
+
+            result = []
+
+            minus_stmt = select(MinusKeyword)
+            minus_kws = (await db.execute(minus_stmt)).scalars().all()
+            for kw in minus_kws:
+                result.append(kw.value.lower().strip())
+
+            self._minus_cache = result
+            return result
+
     async def invalidate(self):
         async with self._lock:
             self._cache = None
+            self._minus_cache = None
 
     @staticmethod
-    def message_matches(text: str, filters: dict[str, list[str]]) -> bool:
+    def message_matches(
+            text: str,
+            filters: dict[str, list[str]],
+            minus_kw: list
+    ) -> bool:
         lowered = text.lower()
+        if any(kw in lowered for kw in minus_kw):
+            return False
         for group_keywords in filters.values():
             if not any(kw in lowered for kw in group_keywords):
                 return False
