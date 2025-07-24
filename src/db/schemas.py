@@ -48,3 +48,8 @@ class FilterKeywordMinusCreate(FilterKeywordBase):
 
 class FilterKeywordMinusBulkCreate(BaseModel):
     values: list[FilterKeywordMinusCreate]
+
+class FilterKeywordMinusOut(FilterKeywordBase):
+    id: int
+    class Config:
+        orm_mode = True

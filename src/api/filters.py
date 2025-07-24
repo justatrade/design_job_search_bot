@@ -82,7 +82,10 @@ async def add_keywords_bulk(
     await filter_cache.invalidate()
     return {"inserted": len(keywords)}
 
-@router.get("/minus-keywords", response_model=list[schemas.FilterKeywordBase])
+@router.get(
+    "/minus-keywords",
+    response_model=list[schemas.FilterKeywordMinusOut]
+)
 async def get_minus_keywords(db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(models.MinusKeyword))
     return result.scalars().all()
@@ -93,11 +96,17 @@ async def add_minus_keywords_bulk(
         db: AsyncSession = Depends(get_db),
 ):
     keywords = [
-        models.MinusKeyword(value=value.strip())
-        for value in data.values if value.strip()
+        models.MinusKeyword(value=value.value.strip())
+        for value in data.values if value.value.strip()
     ]
 
     db.add_all(keywords)
     await db.commit()
     await filter_cache.invalidate()
     return {"inserted": len(keywords)}
+
+@router.delete("/minus-keywords/{keyword_id}", status_code=204)
+async def delete_minus_keyword(keyword_id: int, db: AsyncSession = Depends(get_db)):
+    await db.execute(delete(models.MinusKeyword).filter_by(id=keyword_id))
+    await db.commit()
+    await filter_cache.invalidate()
